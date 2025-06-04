@@ -1,0 +1,1463 @@
+#include <iostream>
+#include <string>
+#include <vector> // Required for std::vector
+#include <algorithm> // Required for std::sort
+#include <ctime>
+#include <cstdlib>
+#include <random>   // For better random number generation
+#include <limits>
+#include <iomanip>  // For fixed, setprecision, setw, left, right
+using namespace std;
+
+
+enum logicType {
+    Player,
+    Aggressive,
+    Smart,
+    Dumb,
+    Passive,
+};
+
+enum tireHardness {
+    Soft,
+    Medium,
+    Hard,
+    Intermediate,
+    Wets,
+};
+
+enum trackMoisture {
+    Dry,
+    Wet,
+    VeryWet,
+};
+
+enum trackTemperature {
+    Cold,
+    Normal,
+    Hot,
+};
+
+enum sectorTypeOvertaking {
+    Good,
+    Average,
+    Bad,
+};
+
+enum sectorTypeTurns {
+    Technical,
+    Straight,
+};
+
+enum sectorTypeSpeed {
+    Fast,
+    Med,
+    Slow,
+};
+
+class Tire {
+    public:
+    double tireWear; //will be visible to player
+    bool hasBeenOverheated; //add function to change this flag when tires overheat or reset after pit   
+    tireHardness tireType;
+    double tireTemp;
+    double tirePaceReduction; //percentage pace reduction from tire type/wear/temp.
+    double wearScaled; //dont copy
+        
+    //variables for tire deg
+    double baseDeg; // dont copy
+    double degPerLap; //dont copy
+        
+    //variables for tire temp
+    int tireStress;
+    
+    Tire (double tirewear, bool hasbeenoverheated, tireHardness tiretype, double tiretemp, double tirepacereduction, double wearscaled, double basedeg, double degperlap, int tirestress) {
+        tireWear = tirewear;
+        hasBeenOverheated = hasbeenoverheated;
+        tireType = tiretype;
+        tireTemp = tiretemp;
+        tirePaceReduction = tirepacereduction;
+        wearScaled = wearscaled;
+        baseDeg = basedeg;
+        degPerLap = degperlap;
+        tireStress = tirestress;
+    }
+    
+};
+
+class Car {
+    public:
+    bool goodInCold;
+    bool goodInHot;
+    bool badInCold;
+    bool badInHot;
+    bool goodHighSpeed;
+    bool badHighSpeed;
+    bool goodMediumSpeed;
+    bool badMediumSpeed;
+    bool goodLowSpeed;
+    bool badLowSpeed;
+    int carDegRating; // 0-100
+    
+    Car ( bool goodincold, bool goodinhot, bool badincold, bool badinhot, bool goodhighspeed, bool badhighspeed, bool goodmediumspeed, bool badmediumspeed, bool goodlowspeed, bool badlowspeed, int cardegrating) {
+        goodInCold= goodincold;
+        goodInHot= goodinhot;
+        badInCold = badincold;
+        badInHot = badinhot;
+        goodHighSpeed = goodhighspeed;
+        badHighSpeed = badhighspeed;
+        goodMediumSpeed = goodmediumspeed;
+        badMediumSpeed = badmediumspeed;
+        goodLowSpeed = goodlowspeed;
+        badLowSpeed = badlowspeed;
+        carDegRating = cardegrating;
+    }
+    
+};
+
+class Sector {
+    public:
+    sectorTypeSpeed speed;
+    sectorTypeTurns turns;
+    sectorTypeOvertaking overtaking;
+    double basePace;
+    
+    
+    sectorTypeSpeed getSectorSpeed () {
+        return speed;   
+    }
+    sectorTypeTurns getSectorTurns () {
+        return turns;   
+    }
+    sectorTypeOvertaking getSectorOvertaking () {
+        return overtaking;  
+    }
+    double getBasePace () {
+        return basePace;   
+    }
+};
+
+
+
+class Track {
+    
+    public:
+    Sector sector1;
+    Sector sector2;
+    Sector sector3;
+    int currentSector;
+    sectorTypeSpeed sectorSpeed;
+    sectorTypeTurns sectorTurns;
+    sectorTypeOvertaking sectorOvertaking;
+    double basePace;
+    double pitPenalty;
+    
+    
+    trackMoisture  trackWettness;
+    trackTemperature  trackTemp;
+    int trackRubber; // 0 - 100
+    
+    void initializeSectors (string trackName) {
+        if (trackName == "Spa") {
+            sector1.speed = Fast;
+            sector1.turns = Technical;
+            sector1.overtaking = Good;
+            sector1.basePace = 32;
+            sector2.speed = Med;
+            sector2.turns = Technical;
+            sector2.overtaking = Average;
+            sector2.basePace = 50;
+            sector3.speed = Fast;
+            sector3.turns = Straight;
+            sector3.overtaking = Bad;
+            sector3.basePace = 30;
+            sectorSpeed = sector1.getSectorSpeed();
+            sectorTurns = sector1.getSectorTurns();
+            sectorOvertaking= sector1.getSectorOvertaking();
+            basePace = sector1.getBasePace();
+        }
+    }
+    
+    
+    void updateSector () {
+        if (currentSector == 3) {
+            currentSector = 1;
+        }
+        else {
+            currentSector += 1;
+        }
+        
+        if (currentSector == 1) {
+            sectorSpeed = sector1.getSectorSpeed();
+            sectorTurns = sector1.getSectorTurns();
+            sectorOvertaking= sector1.getSectorOvertaking();
+            basePace = sector1.getBasePace();
+        }
+        if (currentSector == 2) {
+            sectorSpeed = sector2.getSectorSpeed();
+            sectorTurns= sector2.getSectorTurns();
+            sectorOvertaking = sector2.getSectorOvertaking();
+        }
+        if (currentSector == 3) {
+            sectorSpeed= sector3.getSectorSpeed();
+            sectorTurns = sector3.getSectorTurns();
+            sectorOvertaking = sector3.getSectorOvertaking();
+        }
+    }
+    
+    sectorTypeSpeed getSectorSpeed () {
+        return sectorSpeed;   
+    }
+    sectorTypeTurns getSectorTurns () {
+        return sectorTurns;   
+    }
+    sectorTypeOvertaking getSectorOvertaking () {
+        return sectorOvertaking;   
+    }
+    double getBasePace () {
+        return basePace;   
+    }
+    
+    int getCurrentSector () {
+        return currentSector;   
+    }
+    
+    trackMoisture getWettness() {
+        return trackWettness;   
+    }
+    void setWettness(trackMoisture trackwettness) {
+        trackWettness = trackwettness;   
+    }
+    trackTemperature getTemp() {
+        return trackTemp;   
+    }
+    void setTemp(trackTemperature tracktemp) {
+        trackTemp = tracktemp;   
+    }
+    void setTrackRubber (int trackrubber) {
+        trackRubber = trackrubber;  
+    }
+    int getTrackRubber () {
+        return trackRubber;
+    }
+    double getPitPenalty() {
+        return pitPenalty;   
+    }
+    
+};
+
+
+// the Copy class is going to be removed since I'm now putting the Position's in vectors that can swap data without the Copy class
+
+
+class Driver {
+    //holds the starting data for all of the drivers (including yourself)
+    public:
+    string Name;
+    bool isPlayer;
+    logicType driverLogic;
+    int driverRating;
+    string team;
+    
+    Driver (string name, bool isplayer, logicType driverlogic, int driverrating, string Team) {
+        Name = name;
+        isPlayer = isplayer;
+        driverLogic = driverlogic;
+        driverRating = driverrating;
+        team = Team;
+    }
+    
+    void initializeCar () {
+
+    }
+    
+    
+    
+
+};
+
+class Position {
+    //takes the data from the drivers and copies it into its own object
+    //this is where all of the logic for driver actions and claculating variables happens
+    //if a driver passes another swapPosition is called and all of their data is put into a copy and then swapped between the Position objects
+    public:
+    string Name;
+    bool isPlayer;
+    logicType driverLogic;
+    int driverRating; //0-100
+    string team;
+    
+    //varialbes for the tire pace
+    double tireWear; //will be visible to player
+    bool hasBeenOverheated; //add function to change this flag when tires overheat or reset after pit   
+    tireHardness tireType;
+    double tireTemp;
+    double tirePaceReduction; //percentage pace reduction from tire type/wear/temp.
+    double wearScaled; //dont copy
+    
+    //variables for tire deg
+    double baseDeg; // dont copy
+    double degPerLap; //dont copy
+    
+    //variables for tire temp
+    int tireStress;
+    
+    //track variables
+    trackMoisture trackWettness;
+    trackTemperature trackTemp;
+    int trackRubber; //use for tire deg and later to implement track based paced modifiers
+    int currentSector;
+    
+    //car variables. pass in from driver in initilization
+    bool goodInCold;
+    bool goodInHot;
+    bool badInCold;
+    bool badInHot;
+    bool goodHighSpeed;
+    bool badHighSpeed;
+    bool goodMediumSpeed;
+    bool badMediumSpeed;
+    bool goodLowSpeed;
+    bool badLowSpeed;
+    int carDegRating; // 0-100
+    
+    //variables for the race
+    double totalTime;
+    int driverAgression; // 1-5. Do copy
+    bool isOvertaking;
+    double Pminus1TotalTime;
+    int Pminus1Rating;
+    sectorTypeSpeed sectorSpeed;
+    sectorTypeTurns sectorTurns;
+    sectorTypeOvertaking sectorOvertaking;
+    double basePace;
+    double newPace;
+    int overtakeChance;
+    bool overtakeWorked;
+    bool pitThisLap;
+    tireHardness nextTire;
+    double pitPenalty;
+    bool justPitted;
+    
+    Position (string name, bool isplayer, logicType driverlogic, int driverrating, string Team, 
+    bool goodincold, bool goodinhot, bool badincold, bool badinhot, bool goodhighspeed, bool badhighspeed, bool goodmediumspeed, bool badmediumspeed, bool goodlowspeed, bool badlowspeed, int cardegrating,
+    int currentsector, sectorTypeSpeed sectorspeed, sectorTypeTurns sectorturns, sectorTypeOvertaking sectorovertaking, double basepace, double pitpenalty, trackMoisture  trackwettness, trackTemperature  tracktemp, int trackrubber, 
+    double tirewear, bool hasbeenoverheated, tireHardness tiretype, double tiretemp, double tirepacereduction, double wearscaled, double basedeg, double degperlap, int tirestress) {
+        Name = name;
+        isPlayer = isplayer;
+        driverLogic = driverlogic;
+        driverRating = driverrating;
+        team = Team;
+        
+        goodInCold= goodincold;
+        goodInHot= goodinhot;
+        badInCold = badincold;
+        badInHot = badinhot;
+        goodHighSpeed = goodhighspeed;
+        badHighSpeed = badhighspeed;
+        goodMediumSpeed = goodmediumspeed;
+        badMediumSpeed = badmediumspeed;
+        goodLowSpeed = goodlowspeed;
+        badLowSpeed = badlowspeed;
+        carDegRating = cardegrating;
+        
+        currentSector = currentsector;
+        sectorSpeed = sectorspeed;
+        sectorTurns = sectorturns;
+        sectorOvertaking = sectorovertaking;
+        basePace = basepace;
+        pitPenalty = pitpenalty;
+        trackWettness = trackwettness;
+        trackTemp = tracktemp;
+        trackRubber = trackrubber;
+        
+        tireWear = tirewear;
+        hasBeenOverheated = hasbeenoverheated;
+        tireType = tiretype;
+        tireTemp = tiretemp;
+        tirePaceReduction = tirepacereduction;
+        wearScaled = wearscaled;
+        baseDeg = basedeg;
+        degPerLap = degperlap;
+        tireStress = tirestress;
+    }
+    
+    //only used in initilization of the race. sector updates are handled when turn is called
+    void initializeSector (trackMoisture trackwettness, trackTemperature tracktemp, int trackrubber, sectorTypeSpeed sectorspeed, sectorTypeTurns sectorturns, sectorTypeOvertaking sectorovertaking, double basepace, double pitpenalty, int currentsector) { 
+        trackRubber = trackrubber;
+        trackWettness = trackwettness;
+        trackTemp = tracktemp;
+        sectorSpeed = sectorspeed;
+        sectorTurns = sectorturns;
+        sectorOvertaking = sectorovertaking;
+        basePace = basepace;
+        pitPenalty = pitpenalty;
+        currentSector = currentsector;
+    }
+    
+    
+    double getTotalTime () {
+        return totalTime;   
+    }
+    
+    int getDriverRating () {
+        return driverRating;   
+    }
+    
+    
+    
+    void turn(trackMoisture trackwettness, trackTemperature tracktemp, int trackrubber, sectorTypeSpeed sectorspeed, sectorTypeTurns sectorturns, sectorTypeOvertaking sectorovertaking, double basepace, double pitpenalty, int currentsector, double pminus1totaltime, int pminus1rating) {
+        trackRubber = trackrubber;
+        trackWettness = trackwettness;
+        trackTemp = tracktemp;
+        sectorSpeed = sectorspeed;
+        sectorTurns = sectorturns;
+        sectorOvertaking = sectorovertaking;
+        basePace = basepace;
+        pitPenalty = pitpenalty;
+        currentSector = currentsector;
+        Pminus1TotalTime = pminus1totaltime;
+        Pminus1Rating = pminus1rating;
+        
+        justPitted = false; //reset every turn
+        
+        if (isPlayer) {
+            playerAction();
+        }
+        else {
+            if (driverLogic == Aggressive) {
+                aggressiveLogic();
+            }
+        }
+        
+        calcTirePace();
+        calcNewPace();
+        
+        if (isOvertaking == false) {
+            totalTime = totalTime + newPace;
+            if (totalTime < Pminus1TotalTime) {
+                totalTime = Pminus1TotalTime + .2;
+        }
+        
+        if (isOvertaking == true) {
+            totalTime = totalTime + newPace;
+            checkOvertake();   
+        }
+        
+        if (currentSector == 3 && pitThisLap) {
+            pitStop();   
+        }
+        
+        tireTempUpdate();
+        tireDeg();
+        
+        // other calculations for this turn
+        
+    }
+}
+    
+    void checkOvertake () {
+        overtakeChance = 0;
+        if (totalTime < Pminus1TotalTime) {
+            overtakeChance += 65;
+            if (driverRating > Pminus1Rating) {
+                overtakeChance += 15;   
+            }
+        }
+        
+        
+        int rand100;
+        rand100 = rand () % 100;
+        if (rand100 <= overtakeChance) {
+            overtakeworked();   
+        }
+        else {
+            overtakeFailed();   
+        }
+
+    }
+    
+    void overtakeworked() {
+        overtakeWorked = true;
+    }
+    
+    void overtakeFailed() {
+        if (totalTime < Pminus1TotalTime) {
+            totalTime = Pminus1TotalTime + .4;
+        }
+        overtakeWorked = false;
+    }
+    
+    void pitStop() {
+        tireType = nextTire;
+        tireWear = 0;
+        hasBeenOverheated = false;
+        if (tireType == Soft || tireType == Medium || tireType == Hard) {
+            tireTemp = 160;   
+        }
+        if (tireType == Intermediate) {
+            tireTemp = 130;   
+        }
+        if (tireType == Wets) {
+            tireTemp = 100;   
+        }
+        totalTime += pitPenalty;
+        justPitted = true;
+    }
+    
+    
+    void calcNewPace () {
+        newPace = basePace * (1 - tirePaceReduction);
+    }
+    
+    void calcTirePace() {
+        
+        // calculate the pace reduction from tire wear
+        tireWearScaler();
+       
+        // add modifier for tire type
+        tireTypeModifier();
+        
+        //add modifier for cold/overheating tires
+        tireTempPace();
+    }
+    
+    void tireWearScaler() {
+        if (tireWear < 30) {
+            wearScaled = tireWear/2;   
+        }
+        else  if (tireWear > 29 && tireWear < 60) {
+            wearScaled = (29/30)*(tireWear - 30) + 16;
+        }
+        else if (tireWear > 59) {
+            wearScaled = (54/40)*(tireWear - 60) + 46;   
+        }
+        tirePaceReduction = (.035/99)*(wearScaled - 1);
+    }
+    
+    void tireTypeModifier() {
+        if (trackWettness == Dry) {
+            if (tireType == Soft) {
+                tirePaceReduction -= .012;
+            }
+            else if (tireType == Medium) {
+
+            }
+            else if (tireType == Hard) {
+                tirePaceReduction += .012;
+            }
+            else if (tireType == Intermediate) {
+                tirePaceReduction += .02;
+            }
+            else if (tireType == Wets) {
+                tirePaceReduction += .028;
+            }
+        }
+        if (trackWettness == Wet) {
+            if (tireType == Soft) {
+                tirePaceReduction += .08;
+            }
+            else if (tireType == Medium) {
+                tirePaceReduction += .08;
+            }
+            else if (tireType == Hard) {
+                tirePaceReduction += .08;
+            }
+            else if (tireType == Intermediate) {
+                tirePaceReduction -= .024;
+            }
+            else if (tireType == Wets) {
+                tirePaceReduction += .0;
+            }
+        }
+        if (trackWettness == VeryWet) {
+            if (tireType == Soft) {
+                tirePaceReduction += .15;
+            }
+            else if (tireType == Medium) {
+                tirePaceReduction += .15;
+            }
+            else if (tireType == Hard) {
+                tirePaceReduction += .15;
+            }
+            else if (tireType == Intermediate) {
+                tirePaceReduction += .05;
+            }
+            else if (tireType == Wets) {
+                tirePaceReduction -= .04;
+            }
+        }
+    }
+    
+    void tireTempPace() {
+        if (tireType == Soft || tireType == Medium || tireType == Hard) {
+            if (tireTemp < 175) {
+                tirePaceReduction += .012; 
+            }
+            else if (tireTemp > 204) {
+                tirePaceReduction += .012;
+            }
+        }
+        else if (tireType == Intermediate) {
+            if (tireTemp < 140) {
+                tirePaceReduction += .012; 
+            }
+            else if (tireTemp > 180) {
+                tirePaceReduction += .012;
+            }
+        }
+        else if (tireType == Wets) {
+            if (tireTemp < 110) {
+                tirePaceReduction += .012; 
+            }
+            else if (tireTemp > 135) {
+                    tirePaceReduction += .012;
+            }
+        }
+        if (hasBeenOverheated) {
+            tirePaceReduction += .018;   
+        }
+    }
+    
+    
+    void tireDeg() {
+        setBaseDeg();
+        degPerLap = baseDeg;
+        trackRubberDeg();
+        tireTempDeg();
+        trackTempDeg();
+        carRatingDeg();
+        sectorModifierDeg();
+        
+        tireWear += degPerLap;
+    }
+    
+    void setBaseDeg () {
+        if (trackWettness == Dry) {
+            if (tireType == Soft) {
+                baseDeg = 4;
+            }
+            if (tireType == Medium) {
+                baseDeg = 3;
+            }
+            if (tireType == Hard) {
+                baseDeg = 2;
+            }
+            if (tireType == Intermediate) {
+                baseDeg = 6;
+            }
+            if (tireType == Wets) {
+                baseDeg = 8;
+            }
+        }
+        else if (trackWettness == Wet) {
+            if (tireType == Soft) {
+                baseDeg = 3;
+            }
+            if (tireType == Medium) {
+                baseDeg = 2.75;
+            }
+            if (tireType == Hard) {
+                baseDeg = 2.5;
+            }
+            if (tireType == Intermediate) {
+                baseDeg = 2;
+            }
+            if (tireType == Wets) {
+                baseDeg = 2;
+            }
+        }
+        else if (trackWettness == VeryWet) {
+            if (tireType == Soft) {
+                baseDeg = 3;
+            }
+            if (tireType == Medium) {
+                baseDeg = 2.75;
+            }
+            if (tireType == Hard) {
+                baseDeg = 2.5;
+            }
+            if (tireType == Intermediate) {
+                baseDeg = 2.5;
+            }
+            if (tireType == Wets) {
+                baseDeg = 2;
+            }
+        }
+    }
+    
+    void trackRubberDeg () {
+        degPerLap *=  (((-.2 * trackRubber) + 99.2) / 99);  //scaled from 1-100 to .8:1 inversely
+    }
+    
+    void tireTempDeg () {
+        if (tireType == Soft || tireType == Medium || tireType == Hard) {
+            if (tireTemp < 175) {
+                degPerLap *= 1.2; 
+            }
+            else if (tireTemp > 204) {
+                degPerLap *= 1.5;
+            }
+        }
+        else if (tireType == Intermediate) {
+            if (tireTemp < 140) {
+                degPerLap *= 1.1; 
+            }
+            else if (tireTemp > 180) {
+                degPerLap *= 1.6;
+            }
+        }
+        else if (tireType == Wets) {
+            if (tireTemp < 110) {
+                degPerLap *= 1.1; 
+            }
+            else if (tireTemp > 135) {
+                degPerLap *= 1.7;
+            }
+        }
+        if (hasBeenOverheated) {
+            degPerLap *= 1.15;
+        }
+    }
+    
+    void trackTempDeg () {
+        if (trackTemp == Hot) {
+            if (goodInHot) {
+                degPerLap *= .95;
+            }
+            else if (badInHot) {
+                degPerLap *= 1.4;
+            }
+            else {
+                degPerLap *= 1.2;
+            }
+        }
+        if (trackTemp == Cold) {
+            if (goodInCold) {
+                degPerLap *= .85;
+            }
+            else if (badInCold) {
+                degPerLap *= 1.2;
+            }
+            else {
+                degPerLap *= .95;
+            }
+        }
+    }
+    
+    void carRatingDeg () {
+        degPerLap *= (1 + ((carDegRating/250) - .2));   
+    }
+    
+    void driverPushDeg() {
+        if (driverAgression == 1) {
+            if (driverRating > 90) {
+                degPerLap *= .8;
+            }
+            else if (driverRating > 75) {
+                degPerLap *=.87;
+            }
+            else {
+                degPerLap *=.9;
+            }
+        }
+        else if (driverAgression == 2) {
+            if (driverRating > 90) {
+                degPerLap *= .85;
+            }
+            else if (driverRating > 75) {
+                degPerLap *= .92;
+            }
+            else {
+                degPerLap *= .95;
+            }
+        }
+        else if (driverAgression == 3) {
+            if (driverRating > 90) {
+                degPerLap *= .92;
+            }
+            else if (driverRating > 75) {
+                degPerLap *= .98;
+            }
+            else {
+                degPerLap *= 1;
+            }
+        }
+        else if (driverAgression == 4) {
+            if (driverRating > 90) {
+                degPerLap *= .98;
+            }
+            else if (driverRating > 75) {
+                degPerLap *= 1.1;
+            }
+            else {
+                degPerLap *= 1.18;
+            }
+        }
+        else if (driverAgression == 5) {
+            if (driverRating > 90) {
+                degPerLap *= 1.15;
+            }
+            else if (driverRating > 75) {
+                degPerLap *= 1.3;
+            }
+            else {
+                degPerLap *= 1.4;
+            }
+        }
+    }
+    
+    void sectorModifierDeg() {
+        degPerLap /= 3;
+        
+        if (sectorSpeed == Fast) {
+            if (goodHighSpeed) {
+                degPerLap *= .92;
+            }
+            if (badHighSpeed) {
+                degPerLap *= 1.08;
+            }
+        }
+        if (sectorSpeed == Med) {
+            if (goodMediumSpeed) {
+                degPerLap *= .92;
+            }
+            if (badMediumSpeed) {
+                degPerLap *= 1.08;
+            }
+        }
+        if (sectorSpeed == Slow) {
+            if (goodLowSpeed) {
+                degPerLap *= .92;
+            }
+            if (badLowSpeed) {
+                degPerLap *= 1.08;
+            }
+        }
+        
+        if (sectorTurns == Technical) {
+            degPerLap *=1.05;
+        }
+        else if (sectorTurns == Straight) {
+            degPerLap *= .97;   
+        }
+        
+    }
+    
+    
+    void tireTempUpdate() {
+        // parent function to call other functions to update tire temp
+        tireStress = 5;
+        sectorModifierStress();
+        trackTempStress();
+        playerAgroStress();
+        carRatingStress();
+        tireStressToTemp();
+    }
+    
+    void sectorModifierStress () {
+        if (sectorTurns == Technical) {
+            tireStress +=1;   
+        }
+        else if (sectorTurns == Straight) {
+            tireStress -=1;   
+        }
+    }
+    
+    void trackTempStress () {
+        if (trackTemp == Hot) {
+            if (goodInHot == false && badInHot == false) { 
+                tireStress +=2;
+            }
+            else if (goodInHot) {
+                tireStress +=1;
+            }
+            else if (badInHot) {
+                tireStress +=3;   
+            }
+        }
+        else if (trackTemp == Normal) {
+            tireStress +=1;
+        }
+        else if (trackTemp == Cold) {
+            if (goodInCold == false && badInCold == false) { 
+                tireStress +=0;
+            }
+            else if (goodInCold) {
+                tireStress -=1;
+            }
+            else if (badInCold) {
+                tireStress +=2;
+            } 
+        }
+        if (trackRubber < 40) {
+            tireStress +=1;   
+        }
+        if (trackRubber > 75) {
+            tireStress -=1;   
+        }
+    }
+    
+    void playerAgroStress () {
+        if (isOvertaking) {
+            tireStress +=1;
+        }
+        if (driverAgression == 1) {
+            tireStress -=2;   
+        }
+        else if (driverAgression ==2) {
+            tireStress -=1;   
+        }
+        else if (driverAgression ==3) {
+            tireStress +=0;   
+        }
+        else if (driverAgression ==4) {
+            tireStress +=1;   
+        }
+        else if (driverAgression ==5) {
+            tireStress +=2;   
+        }
+    }
+    
+    void carRatingStress () {
+        if (carDegRating > 80) {
+            tireStress -=1;
+        }
+        if (carDegRating < 50)
+            tireStress +=1;
+    }
+    
+    void tireStressToTemp () {
+           // possible range of 0 - 13
+           double tireTempChange;
+            if (tireType == Soft || tireType == Medium || tireType == Hard) {
+                if (tireTemp < 165) {
+                    if (tireStress < 4 ) {
+                       tireTempChange = .95;
+                    }
+                    else if (tireStress > 7 ) {
+                       tireTempChange = 1.1;
+                    }
+                    else {
+                       tireTempChange = 1.05;
+                    }
+                }
+                else if (tireTemp > 204) {
+                    if (tireStress < 6) {
+                       tireTempChange = .95;
+                   }
+                   else if (tireStress > 8) {
+                       tireTempChange = .95;
+                   }
+                   else {
+                       tireTempChange = 1.01;
+                   }        
+               }
+                else {
+                    if (tireStress < 5) {
+                       tireTempChange = .95;
+                   }
+                   else if (tireStress > 7) {
+                       tireTempChange = 1.035;
+                   }
+                   else {
+                       tireTempChange = 1.01;
+                   }
+               }
+            }
+            if (tireType == Intermediate) {
+               if (tireTemp < 130) {
+                    if (tireStress < 4 ) {
+                       tireTempChange = .95;
+                    }
+                    else if (tireStress > 7 ) {
+                       tireTempChange = 1.1;
+                    }
+                    else {
+                       tireTempChange = 1.05;
+                    }
+                }
+                else if (tireTemp > 180) {
+                    if (tireStress < 6) {
+                       tireTempChange = .95;
+                   }
+                   else if (tireStress > 8) {
+                       tireTempChange = .95;
+                   }
+                   else {
+                       tireTempChange = 1.01;
+                   }        
+               }
+                else {
+                    if (tireStress < 5) {
+                       tireTempChange = .95;
+                   }
+                   else if (tireStress > 7) {
+                       tireTempChange = 1.035;
+                   }
+                   else {
+                       tireTempChange = 1.01;
+                   }
+               }
+            }
+            if (tireType == Wets) {
+               if (tireTemp < 100) {
+                    if (tireStress < 4 ) {
+                       tireTempChange = .95;
+                    }
+                    else if (tireStress > 7 ) {
+                       tireTempChange = 1.1;
+                    }
+                    else {
+                       tireTempChange = 1.05;
+                    }
+                }
+                else if (tireTemp > 135) {
+                    if (tireStress < 6) {
+                       tireTempChange = .95;
+                   }
+                   else if (tireStress > 8) {
+                       tireTempChange = .95;
+                   }
+                   else {
+                       tireTempChange = 1.01;
+                   }        
+               }
+                else {
+                    if (tireStress < 5) {
+                       tireTempChange = .95;
+                   }
+                   else if (tireStress > 7) {
+                       tireTempChange = 1.035;
+                   }
+                   else {
+                       tireTempChange = 1.01;
+                   }
+               }
+            }
+           tireTempChange /= 3; //to account for single sector
+           
+           //below accounts for track conditions. subject to change
+           if (trackWettness == Wet) {
+                tireTempChange *=.9;
+           }
+           else if (trackWettness == VeryWet) {
+                tireTempChange *=.8;   
+           }
+           
+           tireTemp = tireTemp * tireTempChange;
+    }
+    
+    
+    void aggressiveLogic() {
+        driverAgression = 3;
+        isOvertaking = true;
+    }
+    
+    void playerAction() {
+        bool takingInput = true;
+        int PlyrActAgg;
+        string PlyrActOvr;
+        string PlyrActPit;
+        string tireChoice;
+        
+        while (takingInput) {
+            cout << "How hard your driver push? (1-5) : " ;
+            cin >> PlyrActAgg;
+            cout << endl;
+            if (PlyrActAgg > 5) {
+                cout << "Invalid input, please try again" << endl;
+            }
+            else if (PlyrActAgg < 1) {
+                cout << "Invalid input, please try again" << endl;
+            }
+            else {
+                driverAgression = PlyrActAgg;
+                takingInput = false;
+            }
+        }
+            
+        takingInput = true;
+        while (takingInput) {
+            cout << "Should your driver be pressuring for and/or attempting an overtake? (yes or no) : "; 
+            cin >> PlyrActOvr;
+            cout << endl;
+            if (PlyrActOvr == "yes") {
+                isOvertaking = true;
+                takingInput = false;
+            }
+            else if (PlyrActOvr == "no") {
+                isOvertaking = false;
+                takingInput = false;
+            }
+            else {
+                cout << "Invalid input, please try again" << endl;
+            }
+        }
+        
+        takingInput = true;
+        while (takingInput) {
+            cout << "Should your driver pit at the end of this lap? (yes or no) : ";
+            cin >> PlyrActPit;
+            cout << endl;
+            if (PlyrActPit == "yes") {
+                pitThisLap = true;
+                cout << "What set of tires will your driver recieve? : ";
+                cin >> tireChoice;
+                cout << endl;
+                if (tireChoice == "soft") {
+                    nextTire = Soft;
+                    takingInput = false;
+                }
+                else if (tireChoice == "medium") {
+                    nextTire = Medium;
+                    takingInput = false;
+                }
+                else if (tireChoice == "hard") {
+                    nextTire = Hard;
+                    takingInput = false;
+                }
+                else if (tireChoice == "intermediate") {
+                    nextTire = Intermediate;
+                    takingInput = false;
+                }
+                else if (tireChoice == "Wets") {
+                    nextTire = Wets;
+                    takingInput = false;
+                }
+                else {
+                    cout << "Invalid input, please try again" << endl;
+                }
+            }
+            else if (PlyrActOvr == "no") {
+                pitThisLap = false;
+                takingInput = false;
+            }
+            else {
+                cout << "Invalid input, please try again" << endl;
+            }
+        }
+        playerActionDebug();
+    }
+    
+    void playerActionDebug () {
+        cout << Name << endl;
+        cout << "Agression : " << driverAgression << endl;
+        cout << "Overtaking : " << isOvertaking << endl;
+        cout << "Is Pitting : " << pitThisLap << endl;
+        cout << "Pitting for : " << nextTire << endl;
+    }
+    
+}; 
+
+
+
+class Race {
+    // class that holds all of the race logic and creates the drivers and positions
+    //Position position 1-20
+    // Driver driver 1-20
+    public:
+    int currentLap;
+    int currentSector;
+    bool isRacing = true;
+    
+    
+    //declare track 
+    Track track1;
+    string trackName;
+    
+    //declare driver and position vectors
+    vector <Driver> driverPool;
+    vector <Position> position;
+    vector <Car> cars;
+    vector <Tire> tires;
+    int numOfDrivers = 4;
+    double Pminus1TotalTime;
+    int Pminus1Rating;
+    
+    
+    string getTireTypeName(tireHardness type) {
+    switch (type) {
+        case Soft: return "Soft";
+        case Medium: return "Medium";
+        case Hard: return "Hard";
+        case Intermediate: return "Intermediate";
+        case Wets: return "Wets";
+        default: return "Unknown"; 
+    }
+}
+    
+    void racingLoop () {
+        while (isRacing) {
+            if (currentLap != 1 && currentSector != 1) { //sector is initilized to sector 1. this accounts for that and skips the update on lap 1 sector 1 *fix this*
+                track1.updateSector(); //calls sector update in track to incremment the sector properly and update relevant variables
+                if (currentSector == 1) {
+                    currentLap ++;   //if sector 1 is crossed a new lap has started
+                }
+            }
+            displayRaceStatus();
+            for (int i =0;  i < numOfDrivers; i++) {
+                
+                if (position[i].isPlayer) {
+                    displayRaceStatus(); //gives and update of the cars ahead so that the player can make a more informed decision
+                }
+                
+                //set deltas to car ahead and account for first place
+                Pminus1TotalTime = 0.0;
+                Pminus1Rating = 0;
+                if (i > 0) {
+                    Pminus1TotalTime = position[i - 1].totalTime;
+                    Pminus1Rating = position[i - 1].driverRating;
+                }
+    
+                position[i].turn(track1.getWettness(), track1.getTemp(), track1.getTrackRubber(), track1.getSectorSpeed(), track1.getSectorTurns(), track1.getSectorOvertaking(), track1.getBasePace(), track1.getPitPenalty(), track1.getCurrentSector(), Pminus1TotalTime, Pminus1Rating);
+                //need to check for overtakes and pits and adjust positions vector order accordingly
+            }
+            
+        }
+    }
+    
+    void displayRaceStatus() {
+        cout << "\n--- Current Race Standings ---" << endl;
+        cout << "Lap: " << currentLap << endl;
+        cout << "Sector: " << currentSector << endl;
+        cout << "------------------------------" << endl;
+    
+        // Set output formatting for floating-point numbers
+        cout << fixed << setprecision(3);
+    
+        // Define column widths for consistent formatting
+        const int NAME_WIDTH = 20;
+        const int TIME_WIDTH = 12;
+        const int INTERVAL_WIDTH = 12;
+        const int TIRE_WIDTH = 12;
+    
+        // Output the header (the "key" for the display)
+        cout << left << setw(NAME_WIDTH) << "Name"
+             << right << setw(TIME_WIDTH) << "Time"
+             << right << setw(INTERVAL_WIDTH) << "Interval"
+             << right << setw(TIRE_WIDTH) << "Tire" << endl;
+        
+        // Separator line for the header
+        cout << string(NAME_WIDTH + TIME_WIDTH + INTERVAL_WIDTH + TIRE_WIDTH, '-') << endl;
+    
+        for (int i = 0; i < position.size(); ++i) {
+            // Prepare interval string
+            string interval_str;
+            if (i == 0) {
+                interval_str = "--"; // Leader has no interval to car ahead
+            } else {
+                double interval = position[i].totalTime - position[i-1].totalTime;
+                interval_str = "+" + to_string(interval);
+                // Limit to 3 decimal places for string conversion as well
+                interval_str = interval_str.substr(0, interval_str.find(".") + 4); 
+            }
+    
+            // Output driver data formatted into columns
+            cout << left << setw(NAME_WIDTH) << position[i].Name
+                 << right << setw(TIME_WIDTH) << position[i].totalTime
+                 << right << setw(INTERVAL_WIDTH) << interval_str
+                 << right << setw(TIRE_WIDTH) << getTireTypeName(position[i].tireType) << endl;
+        }
+        cout << "------------------------------" << endl;
+        cout << endl; 
+}
+    
+    
+    
+    void setTrack() {
+        cout << "Enter Track Name: ";
+        cin >> trackName;   
+        cout << endl;
+    }
+    
+    void initializeDrivers () {
+        driverPool.push_back(Driver("Nate", true, Player, 85, "Ferrari"));
+        driverPool.push_back(Driver("Max Verclappen", false, Aggressive, 100, "Red Bull"));
+        driverPool.push_back(Driver("Lando Nowins", false, Passive, 80, "Mclaren"));
+        driverPool.push_back(Driver("Oscar Pastry", false, Aggressive, 93, "Mclaren"));
+    }
+    
+    void initializeCars () {
+        for (int i =0;  i < numOfDrivers ; i++) {
+            if (driverPool[i].team == "Ferrari") {
+                cars.push_back(Car(false, false, false, false, false, false, false, false, false, false, 80)); //car variables in parentheses 
+            }
+            else if (driverPool[i].team == "Red Bull") {
+                cars.push_back(Car(false, false, false, true, true, false, true, false, false, true, 95)); //car variables in parentheses 
+            }
+            else if (driverPool[i].team == "Mclaren") {
+                cars.push_back(Car(true, true, false, false, true, false, true, false, false, true, 100)); //car variables in parentheses 
+            }
+        }
+    }
+    
+    void initializeTrack () {
+        track1.currentSector = 1;
+        track1.pitPenalty = 24;
+        track1.trackWettness = Dry;
+        track1.trackTemp = Normal;
+        track1.trackRubber = 0;
+        track1.initializeSectors(trackName);
+        //initialize basePace and other sector details in Track
+    }
+    
+    void initializeTires () {
+        
+        for (int i =0;  i < numOfDrivers ; i++) {  
+            tires.push_back(Tire(0, false, Medium, 170, 0, 0, 0, 0, 0));   
+            
+    }
+}
+    
+    void initializePositions () {
+    position.clear();
+    for (int i = 0; i < numOfDrivers; ++i) {
+        if (i < driverPool.size()) {
+            position.emplace_back(Position(
+                driverPool[i].Name,
+                driverPool[i].isPlayer,
+                driverPool[i].driverLogic,
+                driverPool[i].driverRating,
+                driverPool[i].team,
+
+                cars[i].goodInCold,
+                cars[i].goodInHot,
+                cars[i].badInCold,
+                cars[i].badInHot,
+                cars[i].goodHighSpeed,
+                cars[i].badHighSpeed,
+                cars[i].goodMediumSpeed,
+                cars[i].badMediumSpeed,
+                cars[i].goodLowSpeed,
+                cars[i].badLowSpeed,
+                cars[i].carDegRating,
+
+                // Corrected order for track-related parameters
+                // int currentsector, sectorTypeSpeed sectorspeed, sectorTypeTurns sectorturns, sectorTypeOvertaking sectorovertaking, double basepace, double pitpenalty, trackMoisture trackwettness, trackTemperature tracktemp, int trackrubber,
+                track1.getCurrentSector(),     // currentsector (17)
+                track1.getSectorSpeed(),       // sectorspeed (18)
+                track1.getSectorTurns(),       // sectorturns (19)
+                track1.getSectorOvertaking(),  // sectorovertaking (20)
+                track1.getBasePace(),          // basepace (21)
+                track1.getPitPenalty(),        // pitpenalty (22)
+                track1.getWettness(),          // trackwettness (23)
+                track1.getTemp(),              // tracktemp (24)
+                track1.getTrackRubber(),       // trackrubber (25)
+
+                // The tire-related parameters start from tireWear (26)
+                // You are missing `tireWear` from your `emplace_back` call before `tires[i].tireType`
+                // And you are missing `hasBeenOverheated`
+                // You need to decide where tireWear and hasBeenOverheated will come from.
+                // Assuming they are initialized to some default or zero for now:
+                0.0, // placeholder for tireWear (26)
+                false, // placeholder for hasBeenOverheated (27)
+
+                tires[i].tireType, // 28
+                tires[i].tireTemp, // 29
+                tires[i].tirePaceReduction, // 30
+                tires[i].wearScaled, // 31
+                tires[i].baseDeg, // 32
+                tires[i].degPerLap, // 33
+                tires[i].tireStress // 34
+            ));
+        }
+    }
+}
+    
+    
+    
+    
+    void initializeRace() {
+        currentLap = 1;
+        currentSector = 1;
+        isRacing = true;
+        racingLoop();
+    }
+    
+    void debug() {
+    for (int i = 0; i < numOfDrivers; ++i) {
+        if (i < position.size()) { // Use position.size() as position is the actual vector being debugged
+            cout << "--- Driver " << (i + 1) << " Initialization Debug ---" << endl;
+
+            // Driver-related variables
+            cout << "Name: " << position[i].Name << endl;
+            cout << "Is Player: " << (position[i].isPlayer ? "True" : "False") << endl;
+            cout << "Driver Logic: " << static_cast<int>(position[i].driverLogic) << endl; // Cast enum to int for output
+            cout << "Driver Rating: " << position[i].driverRating << endl;
+            cout << "Team: " << position[i].team << endl;
+
+            // Car-related variables
+            cout << "Car Good In Cold: " << (position[i].goodInCold ? "True" : "False") << endl;
+            cout << "Car Good In Hot: " << (position[i].goodInHot ? "True" : "False") << endl;
+            cout << "Car Bad In Cold: " << (position[i].badInCold ? "True" : "False") << endl;
+            cout << "Car Bad In Hot: " << (position[i].badInHot ? "True" : "False") << endl;
+            cout << "Car Good High Speed: " << (position[i].goodHighSpeed ? "True" : "False") << endl;
+            cout << "Car Bad High Speed: " << (position[i].badHighSpeed ? "True" : "False") << endl;
+            cout << "Car Good Medium Speed: " << (position[i].goodMediumSpeed ? "True" : "False") << endl;
+            cout << "Car Bad Medium Speed: " << (position[i].badMediumSpeed ? "True" : "False") << endl;
+            cout << "Car Good Low Speed: " << (position[i].goodLowSpeed ? "True" : "False") << endl;
+            cout << "Car Bad Low Speed: " << (position[i].badLowSpeed ? "True" : "False") << endl;
+            cout << "Car Degradation Rating: " << position[i].carDegRating << endl;
+
+            // Track-related variables
+            cout << "Current Sector: " << position[i].currentSector << endl;
+            cout << "Sector Speed Type: " << static_cast<int>(position[i].sectorSpeed) << endl; // Cast enum
+            cout << "Sector Turns Type: " << static_cast<int>(position[i].sectorTurns) << endl; // Cast enum
+            cout << "Sector Overtaking Type: " << static_cast<int>(position[i].sectorOvertaking) << endl; // Cast enum
+            cout << "Base Pace: " << position[i].basePace << endl;
+            cout << "Pit Penalty: " << position[i].pitPenalty << endl;
+            cout << "Track Wettness: " << static_cast<int>(position[i].trackWettness) << endl; // Cast enum
+            cout << "Track Temp: " << static_cast<int>(position[i].trackTemp) << endl; // Cast enum
+            cout << "Track Rubber: " << position[i].trackRubber << endl;
+
+            // Tire-related variables (including placeholders)
+            cout << "Tire Wear (Placeholder): " << position[i].tireWear << endl;
+            cout << "Has Been Overheated (Placeholder): " << (position[i].hasBeenOverheated ? "True" : "False") << endl;
+            cout << "Tire Type: " << static_cast<int>(position[i].tireType) << endl; // Cast enum
+            cout << "Tire Temp: " << position[i].tireTemp << endl;
+            cout << "Tire Pace Reduction: " << position[i].tirePaceReduction << endl;
+            cout << "Tire Wear Scaled: " << position[i].wearScaled << endl;
+            cout << "Tire Base Degradation: " << position[i].baseDeg << endl;
+            cout << "Tire Deg Per Lap: " << position[i].degPerLap << endl;
+            cout << "Tire Stress: " << position[i].tireStress << endl;
+
+            cout << endl; // Add a blank line for separation
+        }
+    }
+}
+    
+    void initialize() {
+        setTrack();
+        initializeDrivers();
+        initializeCars();
+        initializeTrack();
+        initializeTires();
+        initializePositions();
+        initializeRace();
+        debug();// this and all code below this in this function are for debugging purposes
+        displayRaceStatus();
+        position[0].playerAction();
+    }
+    
+    
+    
+    
+    
+    
+ 
+    
+};
+
+
+int main() {
+    Race race1;
+    race1.initialize();
+
+
+}
+
+
+
+
+
